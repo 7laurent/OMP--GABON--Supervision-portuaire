@@ -1,20 +1,52 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# OMP Gabon - Supervision Portuaire
 
-# Run and deploy your AI Studio app
+## Système de gestion de maintenance
 
-This contains everything you need to run your app locally.
+Application web de supervision et de gestion de la maintenance des équipements du terminal portuaire d'Owendo.
 
-View your app in AI Studio: https://ai.studio/apps/fdfc8811-8d26-4596-a80f-ece70b076a15
+### Fonctionnalités
 
-## Run Locally
+- Dashboard de maintenance
+- Gestion des équipements
+- Gestion des pannes
+- Gestion des Work Orders
+-  Gestion des techniciens
+- Gestion des pièces de rechange
+-  Maintenance préventive
+-  Historique des interventions
+-  Calcul des KPI de maintenance
+-  Import de documents et fichiers Excel
+-  Stockage des documents avec Supabase Storage
+-  Base de données Supabase
 
-**Prerequisites:**  Node.js
+### Technologies utilisées
 
+- React
+- JavaScript / TypeScript
+- Vite
+- Supabase
+- Supabase Database
+- Supabase Storage
+- HTML / CSS
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Architecture
+
+```text
+Frontend React
+      │
+      ▼
+Supabase
+ 
+ │   Database    
+ │ équipements   
+ │ pannes        
+ │ work_orders   
+ │ techniciens   
+ │ pièces        
+ 
+      │
+      ▼
+Supabase Storage
+      │
+      ▼
+Documents / Excel / fichiers
