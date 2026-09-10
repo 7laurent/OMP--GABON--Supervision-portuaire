@@ -1,0 +1,168 @@
+import React, { useState } from 'react';
+import { History, Search, FileText, Download, Calendar, Filter } from 'lucide-react';
+import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
+
+export default function HistoriquePage({ workOrders = [], pannes = [] }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+
+  // Logs consolidés d'événements pour les 7 engins portuaires
+  const logs = [
+    {
+      id: 'LOG-2025-089',
+      date: '2025-03-08 14:32',
+      equipment: 'Pelle mécanique CAT 349D (PM-01)',
+      event: 'Clôture Work Order WO-2025-001 (Flexibles godet)',
+      author: 'Koumba Jean-Pierre',
+      type: 'Préventif',
+      impact: 'Remise en service 100% nominale'
+    },
+    {
+      id: 'LOG-2025-088',
+      date: '2025-03-08 09:15',
+      equipment: 'Chargeuse sur pneus CAT 988K (CH-01)',
+      event: 'Contrôle pression pneumatiques Michelin X-Mine (6.5 bar)',
+      author: 'Mba Stéphane',
+      type: 'Contrôle Piste',
+      impact: 'Pression réajustée conforme'
+    },
+    {
+      id: 'LOG-2025-087',
+      date: '2025-03-07 17:40',
+      equipment: 'Dumper Rigide Komatsu HD785-7 (DP-02)',
+      event: 'Sortie magasin 2x Kits joints d\'étanchéité vérin bennage',
+      author: 'Magasin Central',
+      type: 'Mouvement Stock',
+      impact: 'Stock restant: 3 kits'
+    },
+    {
+      id: 'LOG-2025-086',
+      date: '2025-03-07 11:20',
+      equipment: 'Bulldozer / Bull CAT D8T (BL-01)',
+      event: 'Visite régalage et mesure usure des tuiles de chenilles',
+      author: 'Inspecteur Matériel Lourd',
+      type: 'Audit & Usure',
+      impact: 'Usure 22% (très satisfaisant)'
+    },
+    {
+      id: 'LOG-2025-085',
+      date: '2025-03-06 16:05',
+      equipment: 'Tracteur de Quai Terberg YT220 (TR-01)',
+      event: 'Vidange transmission automatique Allison & graissage sellette',
+      author: 'Ndong Emmanuel',
+      type: 'Préventif',
+      impact: 'Remis en rotation quai sous 1.2h'
+    },
+    {
+      id: 'LOG-2025-084',
+      date: '2025-03-05 10:20',
+      equipment: 'Camion Benne Mercedes Actros 4144 (CM-01)',
+      event: 'Contrôle géométrie essieux 8x4 et vérification benne Meiller',
+      author: 'Obame Patrice',
+      type: 'Visite Sécurité',
+      impact: 'Conforme sécurité routière portuaire'
+    },
+    {
+      id: 'LOG-2025-083',
+      date: '2025-03-04 15:45',
+      equipment: 'Tractopelle JCB 4CX (TP-01)',
+      event: 'Purge circuit hydraulique marteau piqueur BRH auxiliaire',
+      author: 'Mba Stéphane',
+      type: 'Maintenance Rapide',
+      impact: 'Disponibilité immédiate pour travaux voies'
+    }
+  ];
+
+  const filteredLogs = logs.filter(l => {
+    const matchesSearch = l.equipment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          l.event.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          l.author.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  return (
+    <div className="content" id="historique-page-content">
+      {/* En-tête Dossier 1 */}
+      <div className="section-heading" style={{ marginBottom: '28px' }}>
+        <div>
+          <div className="section-label">TRAÇABILITÉ & AUDIT</div>
+          <div className="section-title" style={{ fontSize: '28px', marginTop: '4px' }}>
+            Historique & Journal des Événements
+          </div>
+          <p style={{ fontSize: '14px', color: 'var(--muted)', marginTop: '4px' }}>
+            Traçabilité complète des interventions, changements d'état et mouvements sur les 7 familles d'engins portuaires.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button type="button" className="btn-secondary" id="btn-export-logs">
+            <Download size={16} /> Exporter le registre (CSV / PDF)
+          </button>
+        </div>
+      </div>
+
+      {/* SCHÉMAS STATISTIQUES HISTORIQUES MULTI-PÉRIODES */}
+      <WeeklyStatsDiagram 
+        pageTitle="Chronologie & Tendances Statistiques Multi-Périodes"
+        subtitle="Historique hebdomadaire des événements et interventions sur la flotte de maintenance"
+        context="historique"
+      />
+
+      {/* Journal des Événements */}
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <div className="section-label">JOURNAL DE BORD</div>
+            <div className="section-title">Événements Techniques Enregistrés</div>
+          </div>
+        </div>
+
+        {/* Filtre de recherche */}
+        <div className="filters-bar" style={{ background: 'var(--card-bg)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '20px' }}>
+          <div className="search-box" style={{ maxWidth: '400px' }}>
+            <Search className="search-icon" size={16} />
+            <input 
+              type="text" 
+              placeholder="Rechercher par équipement, événement ou auteur..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              id="search-history-input"
+            />
+          </div>
+        </div>
+
+        <div className="table-responsive" style={{ background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th>Code Événement</th>
+                <th>Date & Heure</th>
+                <th>Équipement Concerne</th>
+                <th>Description de l'Événement</th>
+                <th>Opérateur / Technicien</th>
+                <th>Type</th>
+                <th>Impact Opérationnel</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLogs.map((log) => (
+                <tr key={log.id}>
+                  <td style={{ fontWeight: 700, color: 'var(--orange)' }}>{log.id}</td>
+                  <td style={{ fontSize: '13px', whiteSpace: 'nowrap' }}>{log.date}</td>
+                  <td style={{ fontWeight: 600 }}>{log.equipment}</td>
+                  <td>{log.event}</td>
+                  <td style={{ fontSize: '13px', color: 'var(--muted)' }}>{log.author}</td>
+                  <td>
+                    <span className="badge badge-subtle">{log.type}</span>
+                  </td>
+                  <td style={{ fontSize: '13px', fontWeight: 600, color: 'var(--green)' }}>
+                    {log.impact}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
