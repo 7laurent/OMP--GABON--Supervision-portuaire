@@ -1,0 +1,6 @@
+{
+  "name": "OMP Gabon - Supervision Portuaire",
+  "description": "Supervision Intégrée & Performance de la Maintenance Portuaire d'Owendo (Groupe Eramet) avec mode sombre bleu nuit.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
