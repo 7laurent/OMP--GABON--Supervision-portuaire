@@ -458,8 +458,7 @@ function AppContent() {
         {activeTab === 'preventive_plan' && (
           <PreventivePlanPage
             equipments={equipments}
-            plans={preventivePlans}
-            onDeletePlan={handleDeletePreventivePlan}
+            workOrders={workOrders}
           />
         )}
 

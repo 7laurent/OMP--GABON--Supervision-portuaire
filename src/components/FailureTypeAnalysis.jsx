@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Repeat } from 'lucide-react';
+import { Repeat, Search } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { calculateFailureTypeRanking, getPeriodRange, getAvailableYears } from '../utils/kpiCalculations.js';
 import PeriodFilterBar, { getCurrentWeekValue, getCurrentMonthValue } from './PeriodFilterBar.jsx';
@@ -17,6 +17,7 @@ export default function FailureTypeAnalysis({ equipments = [], pannes = [] }) {
   const [year, setYear] = useState(new Date().getFullYear());
   const [category, setCategory] = useState('all');
   const [equipmentId, setEquipmentId] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const availableYears = useMemo(() => getAvailableYears(pannes), [pannes]);
   const categories = useMemo(() => Array.from(new Set(equipments.map((e) => e.category).filter(Boolean))), [equipments]);
@@ -32,6 +33,13 @@ export default function FailureTypeAnalysis({ equipments = [], pannes = [] }) {
   );
 
   const topType = ranking[0] || null;
+
+  const filtered = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return ranking;
+    return ranking.filter((t) => t.type.toLowerCase().includes(term) || t.topEquipment.toLowerCase().includes(term));
+  }, [ranking, searchTerm]);
+  const displayRows = searchTerm.trim() ? filtered : filtered.slice(0, 10);
 
   return (
     <div className="performance-card" style={{ padding: '20px', background: isDarkMode ? '#07182e' : '#fff', border: '1px solid var(--border)', borderRadius: '12px', marginBottom: '20px' }} id="failure-type-analysis">
@@ -73,6 +81,16 @@ export default function FailureTypeAnalysis({ equipments = [], pannes = [] }) {
         )}
       </div>
 
+      <div className="search-box" style={{ marginBottom: '12px', maxWidth: '320px' }}>
+        <Search className="search-icon" size={16} />
+        <input
+          type="text"
+          placeholder="Rechercher un type de panne ou une machine..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
       <div className="table-wrapper">
         <table>
           <thead>
@@ -84,9 +102,9 @@ export default function FailureTypeAnalysis({ equipments = [], pannes = [] }) {
             </tr>
           </thead>
           <tbody>
-            {ranking.length === 0 ? (
-              <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>Aucune panne sur cette période / ce périmètre.</td></tr>
-            ) : ranking.slice(0, 10).map((t) => (
+            {displayRows.length === 0 ? (
+              <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px' }}>Aucun résultat.</td></tr>
+            ) : displayRows.map((t) => (
               <tr key={t.type}>
                 <td style={{ fontWeight: 700 }}>{t.type}</td>
                 <td style={{ fontWeight: 700, color: 'var(--orange)' }}>{t.count}</td>
@@ -96,8 +114,8 @@ export default function FailureTypeAnalysis({ equipments = [], pannes = [] }) {
             ))}
           </tbody>
         </table>
-        {ranking.length > 10 && (
-          <div style={{ padding: '8px', color: 'var(--muted)', fontSize: '11px' }}>... et {ranking.length - 10} autre(s) type(s) de panne.</div>
+        {!searchTerm.trim() && ranking.length > 10 && (
+          <div style={{ padding: '8px', color: 'var(--muted)', fontSize: '11px' }}>... et {ranking.length - 10} autre(s) type(s) de panne (affinez la recherche pour les voir).</div>
         )}
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Package, Plus, Search, CheckCircle2, AlertTriangle, AlertCircle, Trash2 } from 'lucide-react';
 import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
+import PartsCostAnalysis from '../components/PartsCostAnalysis.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function PiecesPage({ parts = [], onOpenAddModal, onDeletePart }) {
@@ -90,6 +91,9 @@ export default function PiecesPage({ parts = [], onOpenAddModal, onDeletePart })
         subtitle="Consommations hebdomadaires, taux de rotation des pièces et approvisionnements"
         context="pieces"
       />
+
+      {/* COÛTS & VALEUR DU STOCK */}
+      <PartsCostAnalysis parts={parts} />
 
       {/* Inventaire des Pièces */}
       <section className="section">

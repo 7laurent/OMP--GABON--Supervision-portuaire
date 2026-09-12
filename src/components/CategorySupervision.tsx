@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Maximize2, Filter, BarChart3, X } from 'lucide-react';
+import { Maximize2, Filter, BarChart3, X, Search } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import TemporalAnalyticsSection from './TemporalAnalyticsSection.jsx';
 import { calculateEquipmentSpecificKpis, calculateTRC } from '../utils/kpiCalculations.js';
@@ -27,13 +27,16 @@ export const CategorySupervision: React.FC<CategorySupervisionProps> = ({
   const { isDarkMode } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const categories = useMemo(() => Array.from(new Set(equipments.map((e) => e.category).filter(Boolean))), [equipments]);
 
-  const visibleEquipments = useMemo(
-    () => (selectedCategory === 'all' ? equipments : equipments.filter((e) => e.category === selectedCategory)),
-    [equipments, selectedCategory]
-  );
+  const visibleEquipments = useMemo(() => {
+    const byCategory = selectedCategory === 'all' ? equipments : equipments.filter((e) => e.category === selectedCategory);
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return byCategory;
+    return byCategory.filter((e) => e.name.toLowerCase().includes(term) || e.code.toLowerCase().includes(term));
+  }, [equipments, selectedCategory, searchTerm]);
 
   const scopePannes = useMemo(
     () => (selectedCategory === 'all' ? pannes : pannes.filter((p) => p._category === selectedCategory)),
@@ -114,6 +117,17 @@ export const CategorySupervision: React.FC<CategorySupervisionProps> = ({
           </div>
 
           {/* Tableau unique : le contenu change directement selon la catégorie sélectionnée ci-dessus */}
+          <div style={{ padding: '12px 20px 0' }}>
+            <div className="search-box" style={{ maxWidth: '320px' }}>
+              <Search className="search-icon" size={16} />
+              <input
+                type="text"
+                placeholder="Rechercher une machine..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="table-wrapper" style={{ border: 'none', borderRadius: 0 }}>
             <table>
               <thead>

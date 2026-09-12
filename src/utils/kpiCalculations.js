@@ -817,3 +817,76 @@ export function calculateFailureTypeRanking(pannes = [], { from, to, equipmentId
     })
     .sort((a, b) => b.count - a.count);
 }
+
+// ---------------------------------------------------------------------------
+// PLAN PRÉVENTIF RÉEL, DÉRIVÉ DES WORK ORDERS PRÉVENTIFS (LA TABLE preventive_plan
+// N'EST JAMAIS ALIMENTÉE PAR L'IMPORT NI LES FORMULAIRES — ON DÉRIVE DONC LE PLAN
+// DIRECTEMENT DES WORK ORDERS RÉELS PLUTÔT QUE DE DÉPENDRE D'UNE TABLE VIDE)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pour chaque machine, dernière maintenance préventive réellement terminée et
+ * prochaine maintenance préventive planifiée (forcément postérieure, puisque
+ * dérivée d'un Work Order encore non terminé) — sur toutes les machines,
+ * y compris celles sans aucun historique préventif (statut "Aucune planifiée").
+ */
+export function calculatePreventiveMaintenanceSummary(equipments = [], workOrders = []) {
+  const now = Date.now();
+  return equipments.filter((e) => !e.needsReview).map((eq) => {
+    const eqPreventive = workOrders.filter((w) => !w.needsReview
+      && String(w._equipmentId) === String(eq.id)
+      && w._maintenanceType === 'Preventive Maintenance');
+    const completed = eqPreventive.filter((w) => w._status === 'COMPLETED');
+    const upcoming = eqPreventive.filter((w) => w._status !== 'COMPLETED' && w._status !== 'CANCELLED');
+
+    const last = completed.reduce((latest, w) => {
+      const d = w._actualEnd || w._plannedEnd || w._plannedStart;
+      const ld = latest ? (latest._actualEnd || latest._plannedEnd || latest._plannedStart) : null;
+      return (!ld || (d && d > ld)) ? w : latest;
+    }, null);
+
+    const next = upcoming.reduce((earliest, w) => {
+      const d = w._plannedStart;
+      const ed = earliest ? earliest._plannedStart : null;
+      return (!ed || (d && d < ed)) ? w : earliest;
+    }, null);
+
+    let status = 'Aucune planifiée';
+    if (next) {
+      const plannedTime = next._plannedStart ? new Date(next._plannedStart).getTime() : null;
+      status = plannedTime && plannedTime < now ? 'En retard' : 'Planifiée';
+    }
+
+    return {
+      id: eq.id,
+      code: eq.code,
+      name: eq.name,
+      category: eq.category,
+      lastDate: last ? (last._actualEnd || last._plannedEnd || last._plannedStart) : null,
+      nextDate: next ? next._plannedStart : null,
+      nextTechnician: next ? next.technician : null,
+      status
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// ANALYSE DES PIÈCES : COÛT, VALEUR DE STOCK ET SANTÉ DU STOCK (RÉEL)
+// (Le schéma réel n'a aucune table de consommation/achat de pièces liée aux Work
+// Orders — impossible de calculer honnêtement "la pièce la plus utilisée/achetée"
+// sans inventer des données ; on se limite donc au coût et à la santé du stock,
+// seules informations réellement présentes en base.)
+// ---------------------------------------------------------------------------
+
+export function calculatePartsAnalysis(parts = []) {
+  return parts.map((p) => {
+    const stock = Number(p.stock) || 0;
+    const minStock = Number(p.minStock) || 0;
+    const unitPrice = Number(p.unitPrice) || 0;
+    const stockValue = Number((stock * unitPrice).toFixed(2));
+    let stockStatus = 'OK';
+    if (stock <= 0) stockStatus = 'Rupture';
+    else if (stock <= minStock) stockStatus = 'Stock faible';
+    return { ...p, stockValue, stockStatus };
+  });
+}
