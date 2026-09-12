@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AlertTriangle, Plus, Search, AlertCircle, CheckCircle2, Clock, Trash2, BarChart2 } from 'lucide-react';
 import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
 import { CategorySupervision } from '../components/CategorySupervision.tsx';
+import FailureTypeAnalysis from '../components/FailureTypeAnalysis.jsx';
 import EquipmentKpiModal from '../components/modals/EquipmentKpiModal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -102,6 +103,12 @@ export default function PannesPage({ pannes = [], equipments = [], workOrders = 
         pageTitle="Statistiques Multi-Périodes des Défaillances & Pannes"
         subtitle="Distribution réelle des pannes par mois, semaine et jour"
         context="pannes"
+        pannes={pannes}
+      />
+
+      {/* TYPES DE PANNES LES PLUS RÉCURRENTS, PAR MACHINE & CATÉGORIE, SUR UNE PÉRIODE CHOISIE */}
+      <FailureTypeAnalysis
+        equipments={equipments}
         pannes={pannes}
       />
 

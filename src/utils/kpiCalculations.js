@@ -695,3 +695,125 @@ export function calculateKpiTrendSeries(pannes = [], workOrders = [], equipments
     return { key: `${y}-${String(idx + 1).padStart(2, '0')}`, label: `${name} ${String(y).slice(2)}`, hasData: metrics.count > 0, ...metrics };
   });
 }
+
+// ---------------------------------------------------------------------------
+// CLASSEMENT DES MACHINES (pannes / efficacité) ET DES TYPES DE PANNES
+// RÉCURRENTS, SUR UNE PÉRIODE CHOISIE (SEMAINE / MOIS / ANNÉE / TOUT)
+// ---------------------------------------------------------------------------
+
+/** Bornes {from, to} d'une semaine ISO (lundi 00:00 → dimanche 23:59:59). */
+export function isoWeekToDateRange(year, week) {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+  const monday = new Date(week1Monday);
+  monday.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  sunday.setUTCHours(23, 59, 59, 999);
+  return { from: monday, to: sunday };
+}
+
+/** Convertit un choix de période (granularité + valeur native <input type="week"/"month"> ou année) en bornes de dates. `granularity: 'all'` renvoie des bornes nulles (aucun filtre temporel). */
+export function getPeriodRange({ granularity, weekValue, monthValue, year } = {}) {
+  if (granularity === 'week' && weekValue) {
+    const m = /^(\d{4})-W(\d{2})$/.exec(weekValue);
+    if (m) return isoWeekToDateRange(Number(m[1]), Number(m[2]));
+  }
+  if (granularity === 'month' && monthValue) {
+    const m = /^(\d{4})-(\d{2})$/.exec(monthValue);
+    if (m) {
+      const y = Number(m[1]), mo = Number(m[2]) - 1;
+      return { from: new Date(y, mo, 1, 0, 0, 0, 0), to: new Date(y, mo + 1, 0, 23, 59, 59, 999) };
+    }
+  }
+  if (granularity === 'year' && year) {
+    return { from: new Date(year, 0, 1, 0, 0, 0, 0), to: new Date(year, 11, 31, 23, 59, 59, 999) };
+  }
+  return { from: null, to: null };
+}
+
+/**
+ * Classement réel des machines sur une période : nombre de pannes, MTBF/MTTR/Disponibilité/TRC,
+ * pour identifier la machine la plus en panne et la machine la plus efficace (fiable). Les lignes
+ * "à valider" (incohérence détectée) sont exclues, comme pour les autres calculs agrégés.
+ */
+export function calculateEquipmentRanking(equipments = [], pannes = [], workOrders = [], { from, to, category } = {}) {
+  const scopedEquip = equipments.filter((e) => !e.needsReview && (!category || category === 'all' || e.category === category));
+
+  const inRange = (raw) => {
+    if (!raw) return false;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return false;
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  };
+
+  const windowHours = (from && to) ? Math.max(1, (to.getTime() - from.getTime()) / 3600000) : 8760;
+
+  return scopedEquip.map((eq) => {
+    const eqPannes = pannes.filter((p) => !p.needsReview && String(p._equipmentId) === String(eq.id) && inRange(`${p.date}T${p.time || '00:00'}:00`));
+    const eqWO = workOrders.filter((w) => !w.needsReview && String(w._equipmentId) === String(eq.id) && inRange(w._createdAt || w._plannedStart));
+    const panneCount = eqPannes.length;
+    const durationSum = eqPannes.reduce((s, p) => s + (Number(p.durationHours) || 0), 0);
+    const { trc } = calculateTRC(eqPannes);
+    return {
+      id: eq.id,
+      code: eq.code,
+      name: eq.name,
+      category: eq.category,
+      panneCount,
+      woCount: eqWO.length,
+      preventiveWO: eqWO.filter((w) => w._maintenanceType === 'Preventive Maintenance').length,
+      mtbf: panneCount > 0 ? calculateMTBF(windowHours, panneCount) : null,
+      mttr: panneCount > 0 ? calculateMTTR(durationSum || 1, panneCount) : null,
+      dispo: calculateDo(windowHours, durationSum),
+      trc: panneCount > 0 ? trc : null
+    };
+  });
+}
+
+/**
+ * Classement réel des types de pannes les plus récurrents sur une période, avec la machine la
+ * plus touchée par chaque type — filtrable par machine et/ou catégorie.
+ */
+export function calculateFailureTypeRanking(pannes = [], { from, to, equipmentId, category } = {}) {
+  const inRange = (p) => {
+    if (!p.date) return false;
+    const d = new Date(`${p.date}T${p.time || '00:00'}:00`);
+    if (isNaN(d.getTime())) return false;
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  };
+
+  const scoped = pannes.filter((p) => !p.needsReview
+    && (!equipmentId || equipmentId === 'all' || String(p._equipmentId) === String(equipmentId))
+    && (!category || category === 'all' || p._category === category)
+    && inRange(p));
+
+  const byType = {};
+  scoped.forEach((p) => {
+    const type = p.type || 'Non renseigné';
+    if (!byType[type]) byType[type] = { type, count: 0, byEquipment: {} };
+    byType[type].count += 1;
+    const eqKey = p.equipment || 'Inconnu';
+    byType[type].byEquipment[eqKey] = (byType[type].byEquipment[eqKey] || 0) + 1;
+  });
+
+  const total = scoped.length;
+  return Object.values(byType)
+    .map((t) => {
+      const topEquipment = Object.entries(t.byEquipment).sort((a, b) => b[1] - a[1])[0];
+      return {
+        type: t.type,
+        count: t.count,
+        percent: total > 0 ? Number(((t.count / total) * 100).toFixed(1)) : 0,
+        topEquipment: topEquipment ? topEquipment[0] : '—',
+        topEquipmentCount: topEquipment ? topEquipment[1] : 0
+      };
+    })
+    .sort((a, b) => b.count - a.count);
+}

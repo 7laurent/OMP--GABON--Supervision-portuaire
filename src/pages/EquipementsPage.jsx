@@ -15,6 +15,7 @@ import EquipmentKpiModal from '../components/modals/EquipmentKpiModal.jsx';
 import PortSynopticDiagram from '../components/PortSynopticDiagram.jsx';
 import CoreKpiTrio from '../components/CoreKpiTrio.jsx';
 import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
+import EquipmentRankingBoard from '../components/EquipmentRankingBoard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function EquipementsPage({
@@ -117,6 +118,13 @@ export default function EquipementsPage({
 
       {/* KPIS DE FIABILITÉ & MAINTENABILITÉ : MTTR, MTBF, DISPONIBILITÉ */}
       <CoreKpiTrio
+        equipments={equipments}
+        pannes={pannes}
+        workOrders={workOrders}
+      />
+
+      {/* CLASSEMENT DES MACHINES : LA PLUS EN PANNE / LA PLUS EFFICACE, SUR UNE PÉRIODE CHOISIE */}
+      <EquipmentRankingBoard
         equipments={equipments}
         pannes={pannes}
         workOrders={workOrders}
