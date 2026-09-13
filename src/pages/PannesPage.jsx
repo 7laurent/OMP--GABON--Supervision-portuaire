@@ -3,6 +3,7 @@ import { AlertTriangle, Plus, Search, AlertCircle, CheckCircle2, Clock, Trash2, 
 import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
 import { CategorySupervision } from '../components/CategorySupervision.tsx';
 import FailureTypeAnalysis from '../components/FailureTypeAnalysis.jsx';
+import PreventiveCorrectiveHoursSection from '../components/PreventiveCorrectiveHoursSection.jsx';
 import EquipmentKpiModal from '../components/modals/EquipmentKpiModal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -104,6 +105,12 @@ export default function PannesPage({ pannes = [], equipments = [], workOrders = 
         subtitle="Distribution réelle des pannes par mois, semaine et jour"
         context="pannes"
         pannes={pannes}
+      />
+
+      {/* RATIO HORAIRE CORRECTIF / PRÉVENTIF, PAR JOUR/SEMAINE/MOIS */}
+      <PreventiveCorrectiveHoursSection
+        equipments={equipments}
+        workOrders={workOrders}
       />
 
       {/* TYPES DE PANNES LES PLUS RÉCURRENTS, PAR MACHINE & CATÉGORIE, SUR UNE PÉRIODE CHOISIE */}

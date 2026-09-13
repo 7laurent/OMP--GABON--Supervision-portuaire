@@ -8,6 +8,7 @@ import {
   calculateWeeklyPercentagesByMonth,
   calculateHourVolumeBreakdown
 } from '../utils/kpiCalculations.js';
+import PreventiveCorrectiveHoursChart from './PreventiveCorrectiveHoursChart.jsx';
 
 /**
  * Analyse temporelle réutilisable : Ratio de pannes, TRC, Ratio Préventif/Correctif
@@ -224,92 +225,9 @@ export default function TemporalAnalyticsSection({
         )}
       </div>
 
-      {/* GRAPHIQUE RATIO PRÉVENTIF / CORRECTIF DANS LE TEMPS (avec nombre exact de Work Orders) */}
-      <div className="performance-card" style={{ padding: '20px', background: isDarkMode ? '#07182e' : '#fff', border: '1px solid var(--border)', borderRadius: '12px', marginBottom: '20px' }}>
-        <strong style={{ fontSize: '14px', color: 'var(--text)' }}>Ratio &amp; Nombre Exact de Work Orders (Préventif / Correctif) par {granularityLabel}</strong>
-        {ratioSeries.length === 0 ? (
-          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Aucun Work Order sur cette période.</div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'flex-end', height: '150px', gap: '10px', marginTop: '16px', overflowX: 'auto', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-            {ratioSeries.slice(-14).map((b) => (
-              <div key={b.key} style={{ flex: '0 0 66px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }} title={`${b.label} : ${b.preventiveCount} préventif(s) [${b.preventiveHours}h] / ${b.correctiveCount} correctif(s) [${b.correctiveHours}h]`}>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>{b.count}</span>
-                <span style={{ fontSize: '9px', color: 'var(--muted)' }}>WO ({b.preventiveCount}P/{b.correctiveCount}C)</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, marginTop: '1px' }}>
-                  <span style={{ color: 'var(--green)' }}>{b.preventiveHours}h</span>
-                  {' / '}
-                  <span style={{ color: 'var(--blue)' }}>{b.correctiveHours}h</span>
-                </span>
-                <div style={{ width: '26px', display: 'flex', flexDirection: 'column-reverse', height: '90px', borderRadius: '3px', overflow: 'hidden', marginTop: '4px' }}>
-                  <div style={{ height: `${b.preventiveRatio}%`, background: 'var(--green)' }} />
-                  <div style={{ height: `${b.correctiveRatio}%`, background: 'var(--blue)' }} />
-                </div>
-                <span style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '6px', textAlign: 'center' }}>{b.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: '16px', marginTop: '10px', fontSize: '11px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', background: 'var(--green)', borderRadius: '2px' }} /> Préventif</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', background: 'var(--blue)', borderRadius: '2px' }} /> Correctif</span>
-        </div>
-      </div>
-
-      {/* TABLEAU DÉDIÉ : HEURES PRÉVENTIF VS CORRECTIF PAR PÉRIODE */}
-      <div className="performance-card" style={{ padding: '20px', background: isDarkMode ? '#07182e' : '#fff', border: '1px solid var(--border)', borderRadius: '12px', marginBottom: '20px' }}>
-        <strong style={{ fontSize: '14px', color: 'var(--text)' }}>Tableau — Heures Dédiées au Préventif vs Correctif par {granularityLabel}</strong>
-        <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '2px 0 12px' }}>
-          Combien d'heures ont été consacrées à la maintenance préventive et corrective, période par période.
-        </p>
-        {ratioSeries.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Aucun Work Order sur cette période.</div>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>{granularityLabel}</th>
-                  <th>WO Préventifs</th>
-                  <th>Heures Préventif</th>
-                  <th>WO Correctifs</th>
-                  <th>Heures Correctif</th>
-                  <th>Total Heures</th>
-                  <th>% Préventif</th>
-                  <th>% Correctif</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ratioSeries.slice(-14).reverse().map((b) => (
-                  <tr key={b.key}>
-                    <td style={{ fontWeight: 700 }}>{b.label}</td>
-                    <td>{b.preventiveCount}</td>
-                    <td style={{ color: 'var(--green)', fontWeight: 700 }}>{b.preventiveHours} h</td>
-                    <td>{b.correctiveCount}</td>
-                    <td style={{ color: 'var(--blue)', fontWeight: 700 }}>{b.correctiveHours} h</td>
-                    <td style={{ fontWeight: 700 }}>{Number((b.preventiveHours + b.correctiveHours).toFixed(1))} h</td>
-                    <td>{b.preventiveRatio}%</td>
-                    <td>{b.correctiveRatio}%</td>
-                  </tr>
-                ))}
-                <tr style={{ borderTop: '2px solid var(--border)' }}>
-                  <td style={{ fontWeight: 800 }}>Total période affichée</td>
-                  <td style={{ fontWeight: 800 }}>{ratioSeries.slice(-14).reduce((s, b) => s + b.preventiveCount, 0)}</td>
-                  <td style={{ fontWeight: 800, color: 'var(--green)' }}>
-                    {Number(ratioSeries.slice(-14).reduce((s, b) => s + b.preventiveHours, 0).toFixed(1))} h
-                  </td>
-                  <td style={{ fontWeight: 800 }}>{ratioSeries.slice(-14).reduce((s, b) => s + b.correctiveCount, 0)}</td>
-                  <td style={{ fontWeight: 800, color: 'var(--blue)' }}>
-                    {Number(ratioSeries.slice(-14).reduce((s, b) => s + b.correctiveHours, 0).toFixed(1))} h
-                  </td>
-                  <td style={{ fontWeight: 800 }}>
-                    {Number(ratioSeries.slice(-14).reduce((s, b) => s + b.preventiveHours + b.correctiveHours, 0).toFixed(1))} h
-                  </td>
-                  <td colSpan={2} />
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* SCHÉMA + TABLEAU DU RATIO HORAIRE CORRECTIF / PRÉVENTIF (composant partagé avec la page Pannes) */}
+      <div style={{ marginBottom: '20px' }}>
+        <PreventiveCorrectiveHoursChart series={ratioSeries} granularityLabel={granularityLabel} />
       </div>
 
       {/* RÉPARTITION HEBDOMADAIRE PAR MOIS SUR UNE ANNÉE */}
