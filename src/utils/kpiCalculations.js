@@ -890,3 +890,25 @@ export function calculatePartsAnalysis(parts = []) {
     return { ...p, stockValue, stockStatus };
   });
 }
+
+// ---------------------------------------------------------------------------
+// ANALYSE DE PARETO (LOI DES 80/20) — GÉNÉRIQUE, RÉUTILISÉE POUR LES PANNES
+// (PAR TYPE), LES ÉQUIPEMENTS (PAR NOMBRE DE PANNES) ET LES PIÈCES (PAR VALEUR
+// DE STOCK). CLASSE CHAQUE LIGNE EN A (jusqu'à 80% cumulé), B (80-95%) ou
+// C (95-100%), SELON L'ANALYSE ABC CLASSIQUE.
+// ---------------------------------------------------------------------------
+
+export function buildPareto(items = []) {
+  const sorted = items.filter((i) => Number(i.value) > 0).sort((a, b) => b.value - a.value);
+  const total = sorted.reduce((s, i) => s + i.value, 0);
+  let cumulativeValue = 0;
+  return sorted.map((i, idx) => {
+    const prevCumulativePercent = total > 0 ? (cumulativeValue / total) * 100 : 0;
+    cumulativeValue += i.value;
+    const percent = total > 0 ? Number(((i.value / total) * 100).toFixed(1)) : 0;
+    const cumulativePercent = total > 0 ? Number(((cumulativeValue / total) * 100).toFixed(1)) : 0;
+    // L'élément qui fait franchir le seuil est inclus dans la classe qu'il atteint (analyse ABC classique)
+    const abcClass = prevCumulativePercent < 80 ? 'A' : prevCumulativePercent < 95 ? 'B' : 'C';
+    return { ...i, rank: idx + 1, percent, cumulativePercent, abcClass };
+  });
+}

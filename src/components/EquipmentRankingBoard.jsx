@@ -3,6 +3,7 @@ import { Trophy, AlertTriangle, ArrowUpDown } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { calculateEquipmentRanking, getPeriodRange, getAvailableYears } from '../utils/kpiCalculations.js';
 import PeriodFilterBar, { getCurrentWeekValue, getCurrentMonthValue } from './PeriodFilterBar.jsx';
+import ParetoChart from './ParetoChart.jsx';
 
 const COLUMNS = [
   { key: 'panneCount', label: 'Pannes' },
@@ -71,6 +72,11 @@ export default function EquipmentRankingBoard({ equipments = [], pannes = [], wo
 
   const fmt = (v, unit = '', digits = 1) => (v === null || v === undefined ? '—' : `${Number(v).toFixed(digits)}${unit}`);
 
+  const paretoItems = useMemo(
+    () => ranking.filter((r) => r.panneCount > 0).map((r) => ({ label: `${r.code} — ${r.name}`, value: r.panneCount })),
+    [ranking]
+  );
+
   return (
     <div className="performance-card" style={{ padding: '20px', background: isDarkMode ? '#07182e' : '#fff', border: '1px solid var(--border)', borderRadius: '12px', marginBottom: '20px' }} id="equipment-ranking-board">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
@@ -123,6 +129,15 @@ export default function EquipmentRankingBoard({ equipments = [], pannes = [], wo
           )}
         </div>
       </div>
+
+      {/* PARETO (LOI DES 80/20) : QUELLES MACHINES CONCENTRENT LA MAJORITÉ DES PANNES */}
+      <ParetoChart
+        items={paretoItems}
+        title="Répartition des Pannes par Machine (Loi de Pareto)"
+        valueLabel="Pannes"
+        showTable={false}
+        embedded
+      />
 
       <div className="table-wrapper">
         <table>

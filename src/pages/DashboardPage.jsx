@@ -18,6 +18,7 @@ import CoreKpiTrio from '../components/CoreKpiTrio.jsx';
 import PortSynopticDiagram from '../components/PortSynopticDiagram.jsx';
 import AfnorTemporalDiagram from '../components/AfnorTemporalDiagram.jsx';
 import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
+import ParetoDashboardSection from '../components/ParetoDashboardSection.jsx';
 import { calculateDo, bucketByPeriod } from '../utils/kpiCalculations.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -128,6 +129,13 @@ export default function DashboardPage({
         pageTitle="Statistiques Multi-Périodes & Comparatif par Catégorie"
         subtitle="Analyses réelles par mois, semaine et jour"
         context="dashboard"
+        equipments={equipments}
+        pannes={pannes}
+        workOrders={workOrders}
+      />
+
+      {/* PARETO (LOI DES 80/20) — PANNES OU ÉQUIPEMENTS, AU CHOIX */}
+      <ParetoDashboardSection
         equipments={equipments}
         pannes={pannes}
         workOrders={workOrders}

@@ -3,6 +3,7 @@ import { Repeat, Search } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { calculateFailureTypeRanking, getPeriodRange, getAvailableYears } from '../utils/kpiCalculations.js';
 import PeriodFilterBar, { getCurrentWeekValue, getCurrentMonthValue } from './PeriodFilterBar.jsx';
+import ParetoChart from './ParetoChart.jsx';
 
 /**
  * Classement réel des types de pannes les plus récurrents sur une période choisie
@@ -40,6 +41,11 @@ export default function FailureTypeAnalysis({ equipments = [], pannes = [] }) {
     return ranking.filter((t) => t.type.toLowerCase().includes(term) || t.topEquipment.toLowerCase().includes(term));
   }, [ranking, searchTerm]);
   const displayRows = searchTerm.trim() ? filtered : filtered.slice(0, 10);
+
+  const paretoItems = useMemo(
+    () => ranking.map((t) => ({ label: t.type, value: t.count })),
+    [ranking]
+  );
 
   return (
     <div className="performance-card" style={{ padding: '20px', background: isDarkMode ? '#07182e' : '#fff', border: '1px solid var(--border)', borderRadius: '12px', marginBottom: '20px' }} id="failure-type-analysis">
@@ -80,6 +86,15 @@ export default function FailureTypeAnalysis({ equipments = [], pannes = [] }) {
           <span style={{ fontSize: '13px', color: 'var(--muted)' }}>Aucune panne sur cette période / ce périmètre.</span>
         )}
       </div>
+
+      {/* PARETO (LOI DES 80/20) : QUELS TYPES DE PANNES CONCENTRENT LA MAJORITÉ DES OCCURRENCES */}
+      <ParetoChart
+        items={paretoItems}
+        title="Répartition des Occurrences par Type de Panne (Loi de Pareto)"
+        valueLabel="Occurrences"
+        showTable={false}
+        embedded
+      />
 
       <div className="search-box" style={{ marginBottom: '12px', maxWidth: '320px' }}>
         <Search className="search-icon" size={16} />

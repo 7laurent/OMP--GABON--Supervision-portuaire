@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Package, Plus, Search, CheckCircle2, AlertTriangle, AlertCircle, Trash2 } from 'lucide-react';
 import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
 import PartsCostAnalysis from '../components/PartsCostAnalysis.jsx';
+import ParetoChart from '../components/ParetoChart.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { calculatePartsAnalysis } from '../utils/kpiCalculations.js';
 
 export default function PiecesPage({ parts = [], onOpenAddModal, onDeletePart }) {
   const { isAdmin } = useAuth();
+  const paretoItems = useMemo(
+    () => calculatePartsAnalysis(parts).map((p) => ({ label: `${p.reference} — ${p.name}`, value: p.stockValue })),
+    [parts]
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [selectedPart, setSelectedPart] = useState(null);
@@ -94,6 +100,15 @@ export default function PiecesPage({ parts = [], onOpenAddModal, onDeletePart })
 
       {/* COÛTS & VALEUR DU STOCK */}
       <PartsCostAnalysis parts={parts} />
+
+      {/* PARETO DES PIÈCES (LOI DES 80/20) PAR VALEUR DE STOCK — TABLEAU UNIQUEMENT */}
+      <ParetoChart
+        items={paretoItems}
+        title="Pareto des Pièces — Valeur de Stock (Loi des 80/20)"
+        valueLabel="Valeur (€)"
+        unit=" €"
+        showChart={false}
+      />
 
       {/* Inventaire des Pièces */}
       <section className="section">
