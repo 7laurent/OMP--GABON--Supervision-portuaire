@@ -912,3 +912,42 @@ export function buildPareto(items = []) {
     return { ...i, rank: idx + 1, percent, cumulativePercent, abcClass };
   });
 }
+
+// ---------------------------------------------------------------------------
+// PROFIL DE PERFORMANCE PAR CATÉGORIE (RADAR) — 4 AXES RÉELS, TOUS DÉJÀ EN %
+// (Disponibilité, TRC, Ratio Préventif, Taux de Clôture WO), POUR COMPARER
+// LES CATÉGORIES DE MACHINES ENTRE ELLES SANS NORMALISER ARTIFICIELLEMENT
+// UNE VALEUR NON-POURCENTAGE COMME LE MTBF.
+// ---------------------------------------------------------------------------
+
+export function calculateCategoryPerformanceRadar(equipments = [], pannes = [], workOrders = []) {
+  const categories = Array.from(new Set(equipments.map((e) => e.category).filter(Boolean)));
+
+  return categories.map((cat) => {
+    const eqOfCat = equipments.filter((e) => e.category === cat && !e.needsReview);
+    const pannesOfCat = pannes.filter((p) => p._category === cat && !p.needsReview);
+    const woOfCat = workOrders.filter((w) => w._category === cat && !w.needsReview);
+
+    const totalOperating = eqOfCat.reduce((s, e) => s + (Number(e.operatingHours) || 0), 0);
+    const totalDowntime = eqOfCat.reduce((s, e) => s + (Number(e.downtimeHours) || 0), 0);
+    const dispo = calculateDo(totalOperating, totalDowntime);
+
+    const { trc } = calculateTRC(pannesOfCat);
+
+    const preventiveCount = woOfCat.filter((w) => w._maintenanceType === 'Preventive Maintenance').length;
+    const correctiveCount = woOfCat.length - preventiveCount;
+    const preventiveRatio = calculatePreventiveRatio(preventiveCount, correctiveCount);
+
+    const completedWO = woOfCat.filter((w) => w.status === 'Terminé').length;
+    const woCompletionRate = woOfCat.length > 0 ? Number(((completedWO / woOfCat.length) * 100).toFixed(1)) : 0;
+
+    return {
+      category: cat,
+      machineCount: eqOfCat.length,
+      dispo,
+      trc: pannesOfCat.length > 0 ? trc : 0,
+      preventiveRatio: woOfCat.length > 0 ? preventiveRatio : 0,
+      woCompletionRate
+    };
+  });
+}

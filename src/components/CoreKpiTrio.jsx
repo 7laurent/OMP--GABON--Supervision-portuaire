@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { bucketByPeriod, calculateMTBF, calculateMTTR, calculateDo, calculateDi, calculateTRC } from '../utils/kpiCalculations.js';
+import RingProgress from './RingProgress.jsx';
 
 const WINDOW_HOURS = { day: 24, week: 168, month: 730 };
 
@@ -279,12 +280,10 @@ export default function CoreKpiTrio({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', margin: '14px 0 8px' }}>
-            <div className="kpi-number" style={{ color: 'var(--green)', fontSize: '32px', lineHeight: 1 }}>
-              {fmt(current.availability)}%
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '14px 0 8px' }}>
+            <RingProgress value={current.availability ?? 0} color="var(--green)" size={72} strokeWidth={7} />
             <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)' }}>
-              (Di : {fmt(current.di)}% | Do : {fmt(current.doVal)}%)
+              Di : {fmt(current.di)}%<br />Do : {fmt(current.doVal)}%
             </span>
           </div>
 
@@ -316,10 +315,8 @@ export default function CoreKpiTrio({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', margin: '14px 0 8px' }}>
-            <div className="kpi-number" style={{ color: 'var(--red)', fontSize: '32px', lineHeight: 1 }}>
-              {fmt(current.trc)}%
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', margin: '14px 0 8px' }}>
+            <RingProgress value={current.trc ?? 0} color="var(--red)" size={72} strokeWidth={7} />
           </div>
 
           <div style={{ padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--hover-bg)', border: '1px solid var(--border)', fontSize: '11px', fontFamily: 'monospace', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
