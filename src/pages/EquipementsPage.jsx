@@ -16,7 +16,9 @@ import PortSynopticDiagram from '../components/PortSynopticDiagram.jsx';
 import CoreKpiTrio from '../components/CoreKpiTrio.jsx';
 import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
 import EquipmentRankingBoard from '../components/EquipmentRankingBoard.jsx';
+import CategoryRadarChart from '../components/CategoryRadarChart.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { calculateCategoryPerformanceRadar } from '../utils/kpiCalculations.js';
 
 export default function EquipementsPage({
   equipments = [],
@@ -27,6 +29,11 @@ export default function EquipementsPage({
   onOpenAddModal
 }) {
   const { isAdmin } = useAuth();
+  const categoryRadarData = calculateCategoryPerformanceRadar(
+    equipments.filter((e) => !e.needsReview),
+    pannes.filter((p) => !p.needsReview),
+    workOrders.filter((w) => !w.needsReview)
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -129,6 +136,15 @@ export default function EquipementsPage({
         pannes={pannes}
         workOrders={workOrders}
       />
+
+      {/* PROFIL DE PERFORMANCE PAR CATÉGORIE — TOUS LES KPI (RADAR) */}
+      <div className="performance-card" style={{ padding: '20px', marginBottom: '20px' }} id="category-radar-section">
+        <strong style={{ fontSize: '14px', color: 'var(--text)' }}>Profil de Performance par Catégorie de Machines</strong>
+        <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '4px 0 12px' }}>
+          Comparaison réelle sur tous les KPI : Disponibilité, TRC, MTBF, MTTR, Ratio Préventif, Ratio Correctif, Taux de clôture des Work Orders.
+        </p>
+        <CategoryRadarChart data={categoryRadarData} />
+      </div>
 
       {/* SCHÉMA SYNOPTIQUE DE LOCALISATION DES MACHINES DU TERMINAL D'OWENDO */}
       <PortSynopticDiagram />

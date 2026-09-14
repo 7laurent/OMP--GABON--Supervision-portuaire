@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { buildPareto } from '../utils/kpiCalculations.js';
+import { smoothPath } from '../utils/chartHelpers.js';
 
 function computeGridLevels(maxVal) {
   const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal || 1)));
@@ -21,6 +22,7 @@ const ABC_COLOR = { A: 'var(--red)', B: 'var(--orange)', C: 'var(--muted)' };
  */
 export default function ParetoChart({ items = [], title, valueLabel = 'Valeur', unit = '', showChart = true, showTable = true, maxChartItems = 10, embedded = false }) {
   const { isDarkMode } = useTheme();
+  const [activePoint, setActivePoint] = useState(null);
   const pareto = useMemo(() => buildPareto(items), [items]);
 
   const chartData = useMemo(() => {
@@ -89,14 +91,27 @@ export default function ParetoChart({ items = [], title, valueLabel = 'Valeur', 
             <line x1={padL} y1={scaleYRight(80)} x2={W - padR} y2={scaleYRight(80)} stroke="var(--red)" strokeWidth="1.3" strokeDasharray="5 3" />
 
             {chartData.map((d, i) => (
-              <rect key={`bar-${d.label}`} x={scaleX(i) - barWidth / 2} y={scaleYLeft(d.value)} width={barWidth} height={Math.max(0, scaleYLeft(0) - scaleYLeft(d.value))} fill={ABC_COLOR[d.abcClass] || 'var(--orange)'} rx="2">
+              <rect
+                key={`bar-${d.label}`} x={scaleX(i) - barWidth / 2} y={scaleYLeft(d.value)} width={barWidth}
+                height={Math.max(0, scaleYLeft(0) - scaleYLeft(d.value))} fill={ABC_COLOR[d.abcClass] || 'var(--orange)'} rx="2"
+                style={{ cursor: 'pointer', opacity: activePoint?.label === d.label ? 1 : 0.92, transition: 'opacity 0.15s ease' }}
+                onClick={() => setActivePoint((cur) => (cur?.label === d.label ? null : d))}
+              >
                 <title>{`${d.label} : ${d.value}${unit} (${d.percent}%)`}</title>
               </rect>
             ))}
 
-            <polyline points={chartData.map((d, i) => `${scaleX(i)},${scaleYRight(d.cumulativePercent)}`).join(' ')} fill="none" stroke={isDarkMode ? '#a78bfa' : '#7c3aed'} strokeWidth="2" />
+            <path
+              d={smoothPath(chartData.map((d, i) => [scaleX(i), scaleYRight(d.cumulativePercent)]))}
+              fill="none" stroke={isDarkMode ? '#a78bfa' : '#7c3aed'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            />
             {chartData.map((d, i) => (
-              <circle key={`pt-${d.label}`} cx={scaleX(i)} cy={scaleYRight(d.cumulativePercent)} r="3.5" fill={isDarkMode ? '#a78bfa' : '#7c3aed'}>
+              <circle
+                key={`pt-${d.label}`} cx={scaleX(i)} cy={scaleYRight(d.cumulativePercent)}
+                r={activePoint?.label === d.label ? 5 : 3.5} fill={isDarkMode ? '#a78bfa' : '#7c3aed'}
+                style={{ cursor: 'pointer', transition: 'r 0.15s ease' }}
+                onClick={() => setActivePoint((cur) => (cur?.label === d.label ? null : d))}
+              >
                 <title>{`Cumulé : ${d.cumulativePercent}%`}</title>
               </circle>
             ))}
@@ -111,6 +126,33 @@ export default function ParetoChart({ items = [], title, valueLabel = 'Valeur', 
                 {d.label}
               </text>
             ))}
+
+            {activePoint && (() => {
+              const idx = chartData.findIndex((d) => d.label === activePoint.label);
+              if (idx === -1) return null;
+              const boxW = 148, boxH = 64;
+              const px = Math.min(Math.max(scaleX(idx) - boxW / 2, 2), W - boxW - 2);
+              const py = Math.max(Math.min(scaleYLeft(activePoint.value), scaleYRight(activePoint.cumulativePercent)) - boxH - 12, 2);
+              return (
+                <foreignObject x={px} y={py} width={boxW} height={boxH} style={{ overflow: 'visible' }}>
+                  <div style={{
+                    background: isDarkMode ? '#0d223c' : '#ffffff', border: `1.5px solid ${ABC_COLOR[activePoint.abcClass] || 'var(--orange)'}`,
+                    borderRadius: '8px', padding: '6px 9px', boxShadow: '0 6px 18px rgba(0,0,0,0.28)', fontSize: '10px', color: 'var(--text)', position: 'relative'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => setActivePoint(null)}
+                      style={{ position: 'absolute', top: '2px', right: '4px', border: 'none', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: '11px', lineHeight: 1, padding: 0 }}
+                    >
+                      ×
+                    </button>
+                    <div style={{ fontWeight: 700, marginBottom: '2px' }}>{activePoint.label}</div>
+                    <div style={{ fontWeight: 800, fontSize: '13px' }}>{typeof activePoint.value === 'number' ? activePoint.value.toLocaleString() : activePoint.value}{unit} <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--muted)' }}>({activePoint.percent}%)</span></div>
+                    <div style={{ color: 'var(--muted)', marginTop: '2px' }}>Cumulé : {activePoint.cumulativePercent}% · Classe {activePoint.abcClass}</div>
+                  </div>
+                </foreignObject>
+              );
+            })()}
           </svg>
         )
       )}

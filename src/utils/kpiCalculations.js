@@ -914,14 +914,17 @@ export function buildPareto(items = []) {
 }
 
 // ---------------------------------------------------------------------------
-// PROFIL DE PERFORMANCE PAR CATÉGORIE (RADAR) — 4 AXES RÉELS, TOUS DÉJÀ EN %
-// (Disponibilité, TRC, Ratio Préventif, Taux de Clôture WO), POUR COMPARER
-// LES CATÉGORIES DE MACHINES ENTRE ELLES SANS NORMALISER ARTIFICIELLEMENT
-// UNE VALEUR NON-POURCENTAGE COMME LE MTBF.
+// PROFIL DE PERFORMANCE PAR CATÉGORIE (RADAR) — TOUS LES KPI RÉELS : DISPONIBILITÉ,
+// TRC, MTBF, MTTR, RATIO PRÉVENTIF, RATIO CORRECTIF, TAUX DE CLÔTURE WO.
+// MTBF/MTTR ne sont pas des pourcentages : ils sont renvoyés en valeur réelle
+// (heures) ici — la normalisation 0-100 relative (nécessaire uniquement pour les
+// positionner sur les mêmes axes qu'un radar) est un choix d'affichage, géré côté
+// composant graphique plutôt qu'inventée ici.
 // ---------------------------------------------------------------------------
 
 export function calculateCategoryPerformanceRadar(equipments = [], pannes = [], workOrders = []) {
   const categories = Array.from(new Set(equipments.map((e) => e.category).filter(Boolean)));
+  const windowHours = 8760; // fenêtre calendaire de référence (≈ 1 an), cohérente avec calculateEquipmentRanking en mode "Tout"
 
   return categories.map((cat) => {
     const eqOfCat = equipments.filter((e) => e.category === cat && !e.needsReview);
@@ -934,9 +937,16 @@ export function calculateCategoryPerformanceRadar(equipments = [], pannes = [], 
 
     const { trc } = calculateTRC(pannesOfCat);
 
+    const panneCount = pannesOfCat.length;
+    const durationSum = pannesOfCat.reduce((s, p) => s + (Number(p.durationHours) || 0), 0);
+    const eqCount = Math.max(1, eqOfCat.length);
+    const mtbf = panneCount > 0 ? calculateMTBF(windowHours * eqCount, panneCount) : null;
+    const mttr = panneCount > 0 ? calculateMTTR(durationSum || 1, panneCount) : null;
+
     const preventiveCount = woOfCat.filter((w) => w._maintenanceType === 'Preventive Maintenance').length;
     const correctiveCount = woOfCat.length - preventiveCount;
     const preventiveRatio = calculatePreventiveRatio(preventiveCount, correctiveCount);
+    const correctiveRatio = woOfCat.length > 0 ? Number((100 - preventiveRatio).toFixed(1)) : 0;
 
     const completedWO = woOfCat.filter((w) => w.status === 'Terminé').length;
     const woCompletionRate = woOfCat.length > 0 ? Number(((completedWO / woOfCat.length) * 100).toFixed(1)) : 0;
@@ -946,7 +956,10 @@ export function calculateCategoryPerformanceRadar(equipments = [], pannes = [], 
       machineCount: eqOfCat.length,
       dispo,
       trc: pannesOfCat.length > 0 ? trc : 0,
+      mtbf,
+      mttr,
       preventiveRatio: woOfCat.length > 0 ? preventiveRatio : 0,
+      correctiveRatio,
       woCompletionRate
     };
   });

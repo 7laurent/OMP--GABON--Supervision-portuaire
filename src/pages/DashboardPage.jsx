@@ -19,8 +19,7 @@ import PortSynopticDiagram from '../components/PortSynopticDiagram.jsx';
 import AfnorTemporalDiagram from '../components/AfnorTemporalDiagram.jsx';
 import WeeklyStatsDiagram from '../components/WeeklyStatsDiagram.jsx';
 import ParetoDashboardSection from '../components/ParetoDashboardSection.jsx';
-import CategoryRadarChart from '../components/CategoryRadarChart.jsx';
-import { calculateDo, bucketByPeriod, calculateCategoryPerformanceRadar } from '../utils/kpiCalculations.js';
+import { calculateDo, bucketByPeriod } from '../utils/kpiCalculations.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function DashboardPage({
@@ -62,8 +61,6 @@ export default function DashboardPage({
   const totalOperatingHours = equipmentsForCalc.reduce((s, e) => s + (e.operatingHours || 0), 0);
   const totalDowntimeHours = equipmentsForCalc.reduce((s, e) => s + (e.downtimeHours || 0), 0);
   const computedDispo = calculateDo(totalOperatingHours, totalDowntimeHours);
-
-  const categoryRadarData = calculateCategoryPerformanceRadar(equipmentsForCalc, pannes.filter((p) => !p.needsReview), workOrdersForCalc);
 
   // Données graphiques Préventif vs Correctif — 6 derniers mois réels
   const performanceMonths = bucketByPeriod(workOrdersForCalc, (w) => w._createdAt || w._plannedStart, 'month')
@@ -143,15 +140,6 @@ export default function DashboardPage({
         pannes={pannes}
         workOrders={workOrders}
       />
-
-      {/* PROFIL DE PERFORMANCE PAR CATÉGORIE (RADAR) — DISPONIBILITÉ / TRC / PRÉVENTIF / CLÔTURE WO */}
-      <div className="performance-card" style={{ padding: '20px', marginBottom: '20px' }} id="category-radar-section">
-        <strong style={{ fontSize: '14px', color: 'var(--text)' }}>Profil de Performance par Catégorie de Machines</strong>
-        <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '4px 0 12px' }}>
-          Comparaison réelle sur 4 axes (Disponibilité, TRC, Ratio Préventif, Taux de clôture des Work Orders).
-        </p>
-        <CategoryRadarChart data={categoryRadarData} />
-      </div>
 
       {/* 2. SECTION AT A GLANCE (Dossier 1) */}
       <section className="section" id="section-at-a-glance">

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Activity, Clock, Percent, ShieldCheck, Calendar, Maximize2, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { calculateKpiTrendSeries, getAvailableYears } from '../utils/kpiCalculations.js';
+import { smoothPath } from '../utils/chartHelpers.js';
 
 const KPI_CONFIGS = {
   dispo: { short: 'DISPO', label: 'Disponibilité', unit: '%', color: 'var(--green)', target: 90, icon: Percent, formula: 'D = MTBF / (MTBF + MTTR) × 100' },
@@ -53,6 +54,7 @@ function useKpiGeometry(series, kpiKey, config) {
 function KpiChartSvg({ kpiKey, series, isDarkMode, dims, granularity }) {
   const config = KPI_CONFIGS[kpiKey];
   const { seriesWithIndex, known, average, trend, gridLevels, axisMax } = useKpiGeometry(series, kpiKey, config);
+  const [activePoint, setActivePoint] = useState(null);
 
   if (known.length === 0) {
     return (
@@ -113,24 +115,32 @@ function KpiChartSvg({ kpiKey, series, isDarkMode, dims, granularity }) {
       )}
 
       {/* Chaque segment continu (semaines/mois consécutifs avec données) est relié par sa
-          propre petite ligne, pour bien montrer l'évolution pas à pas plutôt qu'une courbe unique. */}
+          propre courbe lissée, pour un rendu plus fluide qu'une ligne brisée. */}
       {segments.map((seg, i) => (
-        <polyline
+        <path
           key={i}
-          points={seg.map((p) => `${scaleX(p.i)},${scaleY(p[kpiKey])}`).join(' ')}
+          d={smoothPath(seg.map((p) => [scaleX(p.i), scaleY(p[kpiKey])]))}
           fill="none"
           stroke={config.color}
           strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
       ))}
 
       {seriesWithIndex.map((p) => (p.hasData && p[kpiKey] !== null && p[kpiKey] !== undefined) ? (
         <g key={p.key}>
-          <circle cx={scaleX(p.i)} cy={scaleY(p[kpiKey])} r={pointRadius} fill={config.color}>
+          <circle
+            cx={scaleX(p.i)} cy={scaleY(p[kpiKey])} r={pointRadius + 5}
+            fill="transparent"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setActivePoint((cur) => (cur?.key === p.key ? null : { key: p.key, i: p.i, label: p.label, value: p[kpiKey] }))}
+          />
+          <circle cx={scaleX(p.i)} cy={scaleY(p[kpiKey])} r={activePoint?.key === p.key ? pointRadius + 1.5 : pointRadius} fill={config.color} style={{ pointerEvents: 'none', transition: 'r 0.15s ease' }}>
             {isWeekly && <title>{`${p.label} : ${p[kpiKey]}${config.unit}`}</title>}
           </circle>
           {!isWeekly && (
-            <text x={scaleX(p.i)} y={scaleY(p[kpiKey]) - (pointRadius + 5)} textAnchor="middle" fontSize={fontPoint} fontWeight="700" fill="var(--text)">
+            <text x={scaleX(p.i)} y={scaleY(p[kpiKey]) - (pointRadius + 5)} textAnchor="middle" fontSize={fontPoint} fontWeight="700" fill="var(--text)" style={{ pointerEvents: 'none' }}>
               {p[kpiKey]}{config.unit}
             </text>
           )}
@@ -150,6 +160,36 @@ function KpiChartSvg({ kpiKey, series, isDarkMode, dims, granularity }) {
           {p.label}
         </text>
       ))}
+
+      {activePoint && (() => {
+        const boxW = 128, boxH = average !== null ? 62 : 46;
+        const px = Math.min(Math.max(scaleX(activePoint.i) - boxW / 2, 2), W - boxW - 2);
+        const py = Math.max(scaleY(activePoint.value) - boxH - 14, 2);
+        const deltaAvg = average !== null ? Number((activePoint.value - average).toFixed(1)) : null;
+        return (
+          <foreignObject x={px} y={py} width={boxW} height={boxH} style={{ overflow: 'visible' }}>
+            <div style={{
+              background: isDarkMode ? '#0d223c' : '#ffffff', border: `1.5px solid ${config.color}`, borderRadius: '8px',
+              padding: '6px 9px', boxShadow: '0 6px 18px rgba(0,0,0,0.28)', fontSize: '10px', color: 'var(--text)', position: 'relative'
+            }}>
+              <button
+                type="button"
+                onClick={() => setActivePoint(null)}
+                style={{ position: 'absolute', top: '2px', right: '4px', border: 'none', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: '11px', lineHeight: 1, padding: 0 }}
+              >
+                ×
+              </button>
+              <div style={{ fontWeight: 700, marginBottom: '2px' }}>{activePoint.label}</div>
+              <div style={{ color: config.color, fontWeight: 800, fontSize: '14px' }}>{activePoint.value}{config.unit}</div>
+              {average !== null && (
+                <div style={{ color: 'var(--muted)', marginTop: '2px' }}>
+                  Moyenne : {average}{config.unit} ({deltaAvg > 0 ? '+' : ''}{deltaAvg}{config.unit})
+                </div>
+              )}
+            </div>
+          </foreignObject>
+        );
+      })()}
     </svg>
   );
 
