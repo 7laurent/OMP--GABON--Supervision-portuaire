@@ -113,11 +113,14 @@ CREATE POLICY "omp_users_update" ON public.users FOR UPDATE TO authenticated
 CREATE POLICY "omp_users_delete_admin" ON public.users FOR DELETE TO authenticated
   USING (public.is_admin());
 
--- Filet de sécurité : même si une politique laisse passer une mise à jour,
--- un utilisateur non-admin ne peut jamais changer son propre rôle.
+-- Filet de sécurité : un utilisateur non-admin connecté ne peut jamais changer
+-- son propre rôle depuis l'app. IMPORTANT : auth.uid() vaut NULL quand la requête
+-- est exécutée depuis le SQL Editor de Supabase (hors session utilisateur) — sans
+-- la condition "auth.uid() IS NOT NULL", ce filet bloquerait aussi silencieusement
+-- la définition manuelle du tout premier admin depuis le SQL Editor.
 CREATE OR REPLACE FUNCTION public.prevent_self_role_escalation() RETURNS trigger AS $$
 BEGIN
-  IF NOT public.is_admin() AND NEW.role IS DISTINCT FROM OLD.role THEN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin() AND NEW.role IS DISTINCT FROM OLD.role THEN
     NEW.role := OLD.role;
   END IF;
   RETURN NEW;
